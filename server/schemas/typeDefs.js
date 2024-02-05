@@ -9,12 +9,12 @@ type User {
  }
 
 type Book {
-    bookId: String!
-    title: String!
-    description: String!
-    authors: [String]!
-    image: String
-    link: String
+   authors: [String]
+   description: String!
+   bookId: String!
+   image: String
+   link: String
+   title: String!
  }
 
 type Auth {
@@ -23,16 +23,14 @@ type Auth {
   }
 
 type Query {
-    users: [User]!
-    user(userID: ID!): User
     me: User
   }
 
 type Mutation {
     addUser(username: String!, email: String!, password: String!): Auth
     login(email: String!, password: String!): Auth
-    saveBook(userId: ID!, savedBooks: String!): User
-    removeBook(savedBooks: String!): User
+    saveBook( bookId: String!, title: String!, description: String!, image: String, link: String, authors: [String]): User
+    removeBook(bookId: String!): User
   }
 `;
 

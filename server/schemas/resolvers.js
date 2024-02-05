@@ -3,51 +3,45 @@ const { signToken, AuthenticationError } = require('../utils/auth');
 
 const resolvers = {
     Query: {
-      profiles: async () => {
-        return User.find();
-      },
-  
-      profile: async (parent, { userId }) => {
-        return User.findOne({ _id: userId });
-      },
       // By adding context to our query, we can retrieve the logged in user without specifically searching for them
       me: async (parent, args, context) => {
         if (context.user) {
-          return User.findOne({ _id: context.user._id });
+          return User.findOne({ _id: context.user._id }).select('-__v -password');;
         }
         throw AuthenticationError;
       },
     },
     Mutation: {
         addUser: async (parent, { username, email, password }) => {
-          const profile = await User.create({ username, email, password });
-          const token = signToken(profile);
+          const user = await User.create({ username, email, password });
+          // {id, username, email, password}
+          const token = signToken(user);
     
-          return { token, profile };
+          return { token, user };
         },
-        login: async (parent, { email, password }) => {
-            const profile = await User.findOne({ email });
+        login: async (parent, args) => {
+            const user = await User.findOne({ email: args.email });
       
-            if (!profile) {
+            if (!user) {
               throw AuthenticationError;
             }
       
-            const correctPw = await profile.isCorrectPassword(password);
+            const correctPw = await profile.isCorrectPassword(args.password);
       
             if (!correctPw) {
               throw AuthenticationError;
             }
       
-            const token = signToken(profile);
-            return { token, profile };
+            const token = signToken(user);
+            return { token, user };
           },
-          saveBook: async (parent, { user, body }, context) => {
+          saveBook: async (parent, args, context) => {
             // If context has a `user` property, that means the user executing this mutation has a valid JWT and is logged in
             if (context.user) {
               return User.findOneAndUpdate(
                 { _id: user._id },
                 {
-                  $addToSet: { savedBooks: body },
+                  $addToSet: { savedBooks: args },
                 },
                 {
                   new: true,
@@ -58,10 +52,10 @@ const resolvers = {
             // If user attempts to execute this mutation and isn't logged in, throw an error
             throw AuthenticationError;
           },
-          removeBook: async (parent, { user, params }) => {
+          removeBook: async (parent, {bookId }) => {
             return User.findOneAndUpdate(
               { _id: user._id },
-              { $pull: { savedBooks: params.bookId } },
+              { $pull: { savedBooks: {bookId} } },
               { new: true }
             );
           },
