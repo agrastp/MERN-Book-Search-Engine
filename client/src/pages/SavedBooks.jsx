@@ -12,12 +12,13 @@ import { REMOVE_BOOK } from '../utils/mutations';
 import Auth from '../utils/auth';
 import { removeBookId } from '../utils/localStorage';
 
+//queries and mutations needed to retrieve data
 const SavedBooks = () => {
   const { loading, data } = useQuery(GET_ME);
   const [deleteBook] = useMutation(REMOVE_BOOK);
   const userData = data?.me || {};
 
-  if(!userData?.username) {
+  if (!userData?.username) {
     return (
       <h4>
         You need to be logged in to see this page. Use the navigation links above to sign up or log in!
@@ -25,7 +26,7 @@ const SavedBooks = () => {
     );
   }
 
-  // create function that accepts the book's mongo _id value as param and deletes the book from the database
+  // handles the deletebook from savedbooks after confirmed auth
   const handleDeleteBook = async (bookId) => {
     const token = Auth.loggedIn() ? Auth.getToken() : null;
 
@@ -35,23 +36,32 @@ const SavedBooks = () => {
 
     try {
       await deleteBook({
-        variables: {bookId: bookId},
-        update: cache => {
-          const data = cache.readQuery({ query: GET_ME });
-          const userDataCache = data.me;
-          const savedBooksCache = userDataCache.savedBooks;
-          const updatedBookCache = savedBooksCache.filter((book) => book.bookId !== bookId);
-          data.me.savedBooks = updatedBookCache;
-          cache.writeQuery({ query: GET_ME , data: {data: {...data.me.savedBooks}}})
-        }
+        variables: { bookId: bookId },
+        update: (cache, { data }) => {
+          const existingMeData = cache.readQuery({ query: GET_ME });
+          const updatedSavedBooks = existingMeData.me.savedBooks.filter(
+            (book) => book.bookId !== bookId
+          );
+
+          cache.writeQuery({
+            query: GET_ME,
+            data: {
+              me: {
+                ...existingMeData.me,
+                savedBooks: updatedSavedBooks,
+              },
+            },
+          });
+        },
       });
-      // upon success, remove book's id from localStorage
+      // removes book's id from localStorage
       removeBookId(bookId);
     } catch (err) {
       console.error(err);
     }
   };
-  // if data isn't here yet, say so
+
+
   if (loading) {
     return <h2>LOADING...</h2>;
   }
@@ -72,8 +82,8 @@ const SavedBooks = () => {
         <Row>
           {userData.savedBooks.map((book) => {
             return (
-              <Col md="4">
-                <Card key={book.bookId} border='dark'>
+              <Col md="4" key={book.bookId}>
+                <Card border='dark'>
                   {book.image ? <Card.Img src={book.image} alt={`The cover for ${book.title}`} variant='top' /> : null}
                   <Card.Body>
                     <Card.Title>{book.title}</Card.Title>
