@@ -9,7 +9,7 @@ const SignupForm = () => {
   // set initial form state
   const [userFormData, setUserFormData] = useState({ username: '', email: '', password: '' });
   // set state for form validation
-  const [validated] = useState(false);
+  const [validated, setValidated] = useState(false);
   // set state for alert
   const [showAlert, setShowAlert] = useState(false);
   // define mutation for adding a user
@@ -22,25 +22,26 @@ const SignupForm = () => {
 
   const handleFormSubmit = async (event) => {
     event.preventDefault();
-
+  
     // check if form has everything (as per react-bootstrap docs)
     const form = event.currentTarget;
     if (form.checkValidity() === false) {
-      event.preventDefault();
       event.stopPropagation();
     }
-
+  
+    setValidated(true); // Set validated to true
+  
     try {
       const { data } = await createUser({
         variables: { ...userFormData }
       });
-
+  
       Auth.login(data.addUser.token);
+  
     } catch (err) {
-      console.error(err);
       setShowAlert(true);
     }
-
+  
     setUserFormData({
       username: '',
       email: '',
